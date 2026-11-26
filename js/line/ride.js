@@ -38,9 +38,9 @@ export default {
 		for (const build of STATION_BUILDERS) build(scene, ctx, T);
 	},
 
-	/** Aim between the cart and the belt, so the station that changed the tray is in view. */
+	/** Aim past the belt toward the robots, so the station that changed the tray is in view beside the cart. */
 	focus(pos) {
-		return [pos.x - 1.6, pos.y, 1.3];
+		return [pos.x - 2.8, pos.y, 1.2];
 	},
 
 	drawCargo(r, stopId, pos) {

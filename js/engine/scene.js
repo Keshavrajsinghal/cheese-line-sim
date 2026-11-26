@@ -363,8 +363,10 @@ export class Scene {
 			return;
 		}
 		this.render(t);
-		if (busy || this.gesture) this.raf = requestAnimationFrame(this._loop);
-		else this.lastTs = 0;
+		// A tick may already have queued the next frame (requestFrame during this one); never queue two.
+		if (busy || this.gesture) {
+			if (!this.raf) this.raf = requestAnimationFrame(this._loop);
+		} else if (!this.raf) this.lastTs = 0;
 	}
 
 	resize() {

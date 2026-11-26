@@ -1,8 +1,12 @@
-// Tray denester, grape station, and cracker station.
-// Stub: draws placeholder blocks until the detailed drawing lands. Drawing code only; no text.
+// Head of the line: the tray denester, the grape station, and the cracker station.
+// Each station lives in its own st-head-*.js file; this module calls them. Drawing code only; no text.
 
-import { buildPlaceholders } from "./placeholder.js";
+import { buildCrackers } from "./st-head-crackers.js";
+import { buildDenester } from "./st-head-denester.js";
+import { buildGrapes } from "./st-head-grapes.js";
 
-export function build(scene, ctx) {
-	buildPlaceholders(scene, ctx, null, ["denester","grapes","crackers"]);
+export function build(scene, ctx, T) {
+	buildDenester(scene, ctx, T);
+	buildGrapes(scene, ctx, T);
+	buildCrackers(scene, ctx, T);
 }
