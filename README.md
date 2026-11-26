@@ -1,5 +1,7 @@
 # Cheese Plate Line
 
+Live site: https://keshavrajsinghal.github.io/cheese-line-sim/
+
 An interactive, isometric model of my process design for an automated airline cheese plate line
 (Part 1 of the Intelligent Machines take-home): about 200 plates an hour in a 2-4 C washdown room.
 
