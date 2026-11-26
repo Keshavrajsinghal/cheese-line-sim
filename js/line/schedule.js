@@ -203,6 +203,7 @@ function buildOp2(tMax) {
 		} else {
 			const slot = SLOT_FRONT[e.slot];
 			walkTo(slot);
+			const unl0 = t;
 			act("unlatch", 1.5, Math.PI, { task: `slot-${e.slot + 1}` });
 			const out0 = t;
 			walkTo(DISPATCH_FULL, "push", { carry: "cart-full", task: `slot-${e.slot + 1}` });
@@ -212,7 +213,7 @@ function buildOp2(tMax) {
 			walkTo(slot, "push", { carry: "cart-empty", task: `slot-${e.slot + 1}` });
 			const in1 = t;
 			act("latch", 1.5, Math.PI, { task: `slot-${e.slot + 1}` });
-			swaps.push({ cart: e.cart, slot: e.slot, out0, out1, in0, in1 });
+			swaps.push({ cart: e.cart, slot: e.slot, unl0, out0, out1, in0, in1, lat1: t });
 		}
 	}
 	walkTo(post);
@@ -227,45 +228,66 @@ export function op2(t) {
 	return poseOf(find(o.segs, t), t);
 }
 
+/** A cart is pushed or pulled about this far from Operator 2's center. */
+export const CART_REACH = 1.15;
+const unit = (a) => [Math.cos(a), Math.sin(a)];
+
 /**
- * State of each cart slot at time t: { cart, count, phase, pos } where phase is "filling" (in the
- * slot, gantry placing), "full" (waiting for Operator 2), "leaving" / "arriving" (being pushed,
- * pos is the cart's center [x, y]), or "empty" (no cart in the slot).
- * Also returns `parked`: carts standing in dispatch staging ([{pos, full}]).
+ * State of each cart slot at time t: { cart, count, phase, pos, heading } where phase is
+ * "filling" (in the slot, the gantry placing), "full" (waiting for Operator 2), "leaving" (Operator 2
+ * pulls it out of the slot and to dispatch staging, the cart trailing behind them), "empty" (no
+ * cart in the slot), or "arriving" (Operator 2 pushes an empty cart in front of them, then slides
+ * it into the slot). pos is the cart's center [x, y]; heading the direction it is moving.
+ * Also returns `parked` (full carts waiting in dispatch staging for dispatch to collect) and
+ * `emptyWaiting` (whether the spare empty cart stands in dispatch staging).
  */
 export function carts(t) {
 	const o = buildOp2(t);
 	const placed = platesBy(t);
+	let emptyWaiting = true;
 	const slots = CART_SLOTS.map((s, i) => {
 		const center = [(s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2];
-		// The cart currently assigned to this slot: the latest cart c with c % 2 === i whose
-		// replacement has not arrived yet.
+		// The cart in (or belonging to) this slot: advance past carts whose replacement is latched in.
 		let c = i;
 		while (true) {
 			const sw = o.swaps.find((x) => x.cart === c);
-			if (!sw || t < sw.in1) break;
+			if (!sw || t < sw.lat1) break;
 			c += 2;
 		}
 		const sw = o.swaps.find((x) => x.cart === c);
 		const count = Math.max(0, Math.min(PER_CART, placed - c * PER_CART));
-		const prevSwap = o.swaps.find((x) => x.cart === c - 2);
-		if (prevSwap && t < prevSwap.in1) {
-			// Still swapping in this cart.
-			if (t < prevSwap.out0) return { cart: c - 2, count: PER_CART, phase: "full", pos: center };
-			if (t < prevSwap.out1) return { cart: c - 2, count: PER_CART, phase: "leaving", pos: lerp2(center, DISPATCH_FULL, (t - prevSwap.out0) / (prevSwap.out1 - prevSwap.out0)) };
-			if (t < prevSwap.in0) return { cart: c, count: 0, phase: "empty", pos: null };
-			return { cart: c, count: 0, phase: "arriving", pos: lerp2(DISPATCH_EMPTY, center, (t - prevSwap.in0) / (prevSwap.in1 - prevSwap.in0)) };
+		if (!sw || t < sw.unl0) return { cart: c, count, phase: count >= PER_CART ? "full" : "filling", pos: center, heading: 0 };
+		const slotFront = SLOT_FRONT[i];
+		const outDir = angle(slotFront, DISPATCH_FULL);
+		const [ux, uy] = unit(outDir);
+		const pullStart = [slotFront[0] - ux * CART_REACH, slotFront[1] - uy * CART_REACH];
+		if (t < sw.out0) return { cart: c, count: PER_CART, phase: "leaving", pos: lerp2(center, pullStart, (t - sw.unl0) / (sw.out0 - sw.unl0)), heading: 0 };
+		if (t < sw.out1) {
+			const p = op2(t);
+			const [dx, dy] = unit(p.facing);
+			return { cart: c, count: PER_CART, phase: "leaving", pos: [p.x - dx * CART_REACH, p.y - dy * CART_REACH], heading: p.facing };
 		}
-		if (sw && t >= sw.out0) {
-			if (t < sw.out1) return { cart: c, count: PER_CART, phase: "leaving", pos: lerp2(center, DISPATCH_FULL, (t - sw.out0) / (sw.out1 - sw.out0)) };
-			if (t < sw.in0) return { cart: c + 2, count: 0, phase: "empty", pos: null };
-			return { cart: c + 2, count: 0, phase: "arriving", pos: lerp2(DISPATCH_EMPTY, center, (t - sw.in0) / (sw.in1 - sw.in0)) };
+		if (t < sw.in0) return { cart: c + 2, count: 0, phase: "empty", pos: null, heading: 0 };
+		if (t < sw.in1) {
+			emptyWaiting = false;
+			const p = op2(t);
+			const [dx, dy] = unit(p.facing);
+			return { cart: c + 2, count: 0, phase: "arriving", pos: [p.x + dx * CART_REACH, p.y + dy * CART_REACH], heading: p.facing };
 		}
-		return { cart: c, count, phase: count >= PER_CART ? "full" : "filling", pos: center };
+		emptyWaiting = false;
+		const inDir = angle(DISPATCH_EMPTY, slotFront);
+		const [vx, vy] = unit(inDir);
+		const pushEnd = [slotFront[0] + vx * CART_REACH, slotFront[1] + vy * CART_REACH];
+		return { cart: c + 2, count: 0, phase: "arriving", pos: lerp2(pushEnd, center, (t - sw.in1) / (sw.lat1 - sw.in1)), heading: inDir };
 	});
-	// Full carts wait in dispatch staging for a while after they are left there, then dispatch takes them.
-	const parked = o.swaps.filter((x) => t >= x.out1 && t < x.out1 + 90).map(() => ({ pos: DISPATCH_FULL, full: true }));
-	return { slots, parked: parked.slice(-1), emptyWaiting: true };
+	// A full cart waits in dispatch staging for a while after it is left there, then dispatch takes it.
+	const last = o.swaps.filter((x) => t >= x.out1 && t < x.out1 + 90).pop();
+	let parked = [];
+	if (last) {
+		const [ux, uy] = unit(angle(SLOT_FRONT[last.slot], DISPATCH_FULL));
+		parked = [{ pos: [DISPATCH_FULL[0] - ux * CART_REACH, DISPATCH_FULL[1] - uy * CART_REACH], full: true, cart: last.cart }];
+	}
+	return { slots, parked, emptyWaiting, emptyPos: DISPATCH_EMPTY };
 }
 
 /** Rejects sitting on a rework table at time t: [{m, since}] (picked up when Operator 2 starts fixing). */
