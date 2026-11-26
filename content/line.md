@@ -175,6 +175,7 @@ Prep (the caterer's upstream kitchen) delivers everything to staging beside the 
 
 ## Place: rework-1
 title: Rework Table 1 (before the lid)
+short: Rework Table 1
 
 Plates that fail the [first inspection](#/ride/line/inspect-1) arrive here down a side lane, about 4 an hour (2%) (A). The screen shows the reason, for example "cheese count 3". [Operator 2](#/person/operator-2) adds or fixes the item and sets the plate back on the accumulation conveyor ahead of the camera, so it gets re-checked, or scraps it: dropped, touched a non-food surface, or can't be fixed in about a minute.
 
@@ -184,6 +185,7 @@ Plates that fail the [first inspection](#/ride/line/inspect-1) arrive here down 
 
 ## Place: rework-2
 title: Rework Table 2 (after the lid)
+short: Rework Table 2
 
 Plates that fail the [second inspection](#/ride/line/inspect-2) arrive here, about 2 an hour (1%) (A). [Operator 2](#/person/operator-2) reseats or replaces the lid, relabels a bad code, or scraps the plate if the contents are damaged, then sends it back ahead of the second camera.
 

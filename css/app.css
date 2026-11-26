@@ -2256,3 +2256,8 @@ abbr.assume {
 .prose table:has(thead th:nth-child(4)):not(:has(thead th:nth-child(5))) {
 	min-width: 480px;
 }
+
+/* Small things (the rework tables) keep their labels for closer zooms, so the overview is not a pile of labels. */
+.zoom-far .label.near-only {
+	display: none;
+}

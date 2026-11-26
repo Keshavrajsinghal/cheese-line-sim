@@ -120,7 +120,7 @@ async function main() {
 			const open = () => go({ name: "place", id: placeId });
 			app.focusPoints.set(`place:${placeId}`, labelPos);
 			if (bounds) scene.addHit({ id: `place-${placeId}`, kind: "place", group: RIDE_ID, bounds, priority: 2, onActivate: open });
-			scene.addLabel({ id: `place-${placeId}`, group: RIDE_ID, kind: opts.kind ?? "sign", pos: labelPos, text: opts.text ?? place.title, onClick: open, ariaLabel: place.title });
+			scene.addLabel({ id: `place-${placeId}`, group: RIDE_ID, kind: opts.kind ?? "sign", className: opts.nearOnly ? "near-only" : "", pos: labelPos, text: place.short ?? place.title, onClick: open, ariaLabel: place.title });
 		},
 		/** A person: labelPos may be a function (they walk). Clicking opens their role and workload. */
 		personTarget(personId, boundsFn, labelPos) {

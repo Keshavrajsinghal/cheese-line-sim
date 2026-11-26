@@ -32,6 +32,7 @@ markdown body
 
 ## Place: <id>        supply-aisle staging rework-1 rework-2 cart-slots dispatch cabinet
 title: ...
+short: ...            optional shorter map label
 markdown body
 
 ## Section: <id>      about ai-usage how-to-read throughput shift roster

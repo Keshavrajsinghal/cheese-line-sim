@@ -180,30 +180,37 @@ export const CONTENT = {
 	"places": {
 		"supply-aisle": {
 			"title": "Supply aisle",
+			"short": "Supply aisle",
 			"html": "<p>Every refill point faces this aisle and loads from outside the guard, so nobody opens a door during production. <a href=\"#/person/operator-1\" class=\"internal-link\">Operator 1</a> works here: about 11 refills an hour, one every 5.4 min, and about 50% busy at 200 plates/hr. Level sensors give about 10 min of warning before anything runs out <abbr class=\"assume\" title=\"Assumption, to confirm in a vendor trial or time study\">(A)</abbr>.</p>\n<ul><li>Tray denester: a stack of 250 fiber trays, lasts 75 min</li><li>Grape destacker: a stack of 12 pocket trays (96 bunches), lasts 29 min</li><li>Apple hopper: about 400 slices, lasts 30 min</li><li>Cracker magazine: about 100 packs, lasts 30 min</li><li>Cheese lanes (4): a stack of 20 single-cheese trays per lane, lasts 72 min per lane</li><li>Lid magazine: a stack of 250 lids, lasts 75 min</li><li>Coder: a label roll or ink, once per shift <abbr class=\"assume\" title=\"Assumption, to confirm in a vendor trial or time study\">(A)</abbr></li></ul>"
 		},
 		"staging": {
 			"title": "Supply staging",
+			"short": "Supply staging",
 			"html": "<p>Prep (the caterer's upstream kitchen) delivers everything to staging beside the supply aisle: tray stacks, pocket trays of portioned grape bunches, treated apple slices, cracker packs, single-cheese trays, and lid stacks. Cracker cases are opened outside the cold room, because cardboard sheds fibers and can't be washed, so only the packs come in. <a href=\"#/person/operator-1\" class=\"internal-link\">Operator 1</a> fetches from here and takes empty pocket and cheese trays to the wash, about 10 min an hour <abbr class=\"assume\" title=\"Assumption, to confirm in a vendor trial or time study\">(A)</abbr>.</p>"
 		},
 		"rework-1": {
 			"title": "Rework Table 1 (before the lid)",
+			"short": "Rework Table 1",
 			"html": "<p>Plates that fail the <a href=\"#/ride/line/inspect-1\" class=\"internal-link\">first inspection</a> arrive here down a side lane, about 4 an hour (2%) <abbr class=\"assume\" title=\"Assumption, to confirm in a vendor trial or time study\">(A)</abbr>. The screen shows the reason, for example &quot;cheese count 3&quot;. <a href=\"#/person/operator-2\" class=\"internal-link\">Operator 2</a> adds or fixes the item and sets the plate back on the accumulation conveyor ahead of the camera, so it gets re-checked, or scraps it: dropped, touched a non-food surface, or can't be fixed in about a minute.</p>\n<ul><li>A small chilled kit of each item: wedges of each cheese, slices, packs, and lids</li><li>Gloves</li><li>A rule that kit items come from the same lots the line is running, so the plate's printed code stays true</li></ul>"
 		},
 		"rework-2": {
 			"title": "Rework Table 2 (after the lid)",
+			"short": "Rework Table 2",
 			"html": "<p>Plates that fail the <a href=\"#/ride/line/inspect-2\" class=\"internal-link\">second inspection</a> arrive here, about 2 an hour (1%) <abbr class=\"assume\" title=\"Assumption, to confirm in a vendor trial or time study\">(A)</abbr>. <a href=\"#/person/operator-2\" class=\"internal-link\">Operator 2</a> reseats or replaces the lid, relabels a bad code, or scraps the plate if the contents are damaged, then sends it back ahead of the second camera.</p>"
 		},
 		"cart-slots": {
 			"title": "Rack cart slots",
+			"short": "Rack cart slots",
 			"html": "<p>Two slots beside the end of the line, each holding a rack cart of 24 plates in a 4 x 6 grid, about 800 x 850 mm <abbr class=\"assume\" title=\"Assumption, to confirm in a vendor trial or time study\">(A)</abbr>. The gantry fills one cart while <a href=\"#/person/operator-2\" class=\"internal-link\">Operator 2</a> swaps the other. A light curtain guards each slot: breaking it keeps the gantry out of that slot, and the gantry keeps filling the other one <abbr class=\"assume\" title=\"Assumption, to confirm in a vendor trial or time study\">(A)</abbr>. A sensor confirms the cart is in position before the gantry places. With two slots, Operator 2 has 7.2 min to swap before the second cart fills, and an alarm warns before that.</p>"
 		},
 		"dispatch": {
 			"title": "Dispatch staging",
+			"short": "Dispatch staging",
 			"html": "<p><a href=\"#/person/operator-2\" class=\"internal-link\">Operator 2</a> rolls each full cart here, about 8 an hour, and rolls an empty one back into its slot. Dispatch collects full carts from staging and takes them to the cold store.</p>"
 		},
 		"cabinet": {
 			"title": "Heated controller cabinet",
+			"short": "Heated controller cabinet",
 			"html": "<p>All food-zone equipment is stainless, washdown-rated, and rated down to 0 C, and the room runs at 2-4 C. The robot controllers and gripper air controls sit in this heated cabinet outside the cold room, so they stay dry during the daily washdown. The robots need a warm-up run after a cold start or a washdown, because ABB requires one below 5 C; the <a href=\"#/person/technician\" class=\"internal-link\">line technician</a> runs it.</p>"
 		}
 	},

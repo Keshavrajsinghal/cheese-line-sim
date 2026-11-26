@@ -9,7 +9,7 @@ export function buildPlaceTargets(scene, ctx) {
 	ctx.placeTarget("staging", [STAGING.x0, STAGING.y0, 0, STAGING.x1, STAGING.y1, 2.0], [(STAGING.x0 + STAGING.x1) / 2, 18, 2.4]);
 	for (const id of ["rework-1", "rework-2"]) {
 		const t = REWORK[id];
-		ctx.placeTarget(id, [t.x0, t.y0, 0, t.x1, t.y1, 1.2], [(t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2, 1.5]);
+		ctx.placeTarget(id, [t.x0, t.y0, 0, t.x1, t.y1, 1.2], [(t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2, 1.5], { nearOnly: true });
 	}
 	const s0 = CART_SLOTS[0];
 	const s1 = CART_SLOTS[1];

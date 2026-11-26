@@ -47,11 +47,15 @@ js/line/food.js          the plate model and each food item (drawable on its own
 js/line/plant.js         building: floors, walls, aisles, staging racks, guard fence, warm corridor
 js/line/belts.js         tray belt, accumulation conveyor, the moving trays
 js/line/st-head.js       tray denester, grape station, cracker station
-js/line/st-apples.js     apple station
-js/line/st-cheese.js     cheese station
+                         (helpers st-head-{parts,denester,grapes,crackers}.js)
+js/line/st-apples.js     apple station (st-apples-arm.js: the six-axis arm)
+js/line/st-cheese.js     cheese station (st-cheese-delta.js: the deltas and their cups)
 js/line/st-downstream.js stop gates, inspections, pushers, lanes, re-entry chutes, rework tables, lidding, coder
-js/line/st-outfeed.js    gantry, cart slots, light curtains, carts (incl. carts being pushed and parked)
-js/line/people.js        Operator 1, Operator 2, technician; the controller cabinet
+                         (helpers st-downstream-{util,rework,lidding}.js)
+js/line/st-outfeed.js    gantry, cart slots, light curtains, carts (st-outfeed-cart.js: the rack cart)
+js/line/people.js        Operator 1, Operator 2, technician (people-pose.js: poses from the schedules;
+                         people-carry.js: carried stock; people-cabinet.js: the controller cabinet)
+tools/look.mjs           screenshots of chosen routes at desktop and phone sizes, with console errors
 js/line/places.js        map labels and hit areas for places that are not stops
 js/line/stations.js      the builder list and the stop labels
 js/line/ride.js          the ride module: track, scenery, cargo on the cart, close-up
@@ -99,8 +103,10 @@ short, pushed to Rework Table 1) and `isReject2(m)` (lid not seated, to Rework T
 `GANTRY_LIFT`: when the gantry lifts the tray at the outfeed (it then reaches its cart position
 2.6 s later; see schedule.js `plateTime`).
 
-Every builder gets `T(t)`: use `T(t)` instead of raw scene time, so reduced motion freezes a
-mid-step pose.
+Every builder gets `T(t)` (ride.js): line time = scene time + START (40 steps, so the line opens
+in steady state and every tray on screen has a history in the carts and rework tables). Use `T(t)`
+instead of raw scene time; under reduced motion it returns a fixed mid-step time. For timed
+screenshots, set `window.__rt.app.scene.time` and remember the START offset (about 294.8 s).
 
 ## Schedules (js/line/schedule.js)
 
@@ -113,9 +119,16 @@ mid-step pose.
 - `op2(t)`: Operator 2's pose. kind: walk, push (pushing a cart; carry cart-full or cart-empty),
   watch, fix (at a rework table; task = table id), return (setting a plate in a re-entry
   chute; carry plate), unlatch / latch (at a cart slot).
-- `carts(t)`: `{ slots: [{cart, count, phase, pos}], parked }`; phase filling, full, leaving,
-  empty, arriving; pos is the cart center while it moves. `plateTime(j)`, `platesBy(t)`,
-  `PER_CART` (24, a 4 x 6 grid). Plate j goes to cart floor(j / 24), in slot cart % 2.
+- `carts(t)`: `{ slots: [{cart, count, phase, pos, heading}], parked, emptyWaiting, emptyPos,
+  emptyHeading }`; phase filling, full, leaving, empty, arriving. Carts cross the light-curtain
+  line only straight along x: Operator 2 pulls a full cart straight out, then turns toward the
+  door (it trails `CART_REACH` = 1.8 m behind them); the spare empty cart is grabbed at its handle,
+  swung toward the slot, pushed to a line-up point, and pushed straight in. `plateTime(j)`,
+  `platesBy(t)`, `PER_CART` (24, a 4 x 6 grid). Plate j goes to cart floor(j / 24), slot cart % 2.
+- Walks are routed: Operator 1 goes round the inside corner of the L-shaped supply aisle; Operator
+  2 detours in front of each rework table and its lane, round the parked cart through the doorway,
+  and down the wall side past the spare cart. A numeric check over 2,000 s of line time finds no
+  person inside a guard, table, or cart and no cart overlapping another.
 - `rejectsOn(table, t)`: plates sitting on a rework table (`fixing` once Operator 2 has it).
 - `tech(t)`: the technician at the controller cabinet.
 
@@ -127,6 +140,15 @@ footprint and key points), LANES, REENTRY, REWORK, CART_SLOTS, DISPATCH, CABINET
 TRACK. Feeders load from the back guard line (x = GUARD.back = 6.0), facing the supply aisle;
 robots sit between the feeders and the tray belt (x 10.6 to 11.8); the front guard is at
 x = 12.9; the ride track runs raised at x = 14.2.
+
+## Engine changes from RoboTycoon
+
+- `scene.addHit` accepts function bounds (a hit area that moves with a walking person).
+- `Track.draw` takes `skipColumn(point)` (no supports over the reject lanes, re-entry chutes, or
+  the outfeed) and `live` (the raised track is drawn every frame so it sorts over carts and people).
+- The render loop never queues two frames.
+- `guardRun` (common.js) cuts panels exactly at each opening, with posts at the edges; the back and
+  head guards are live so people in the aisle sort against them.
 
 ## Map targets
 

@@ -234,7 +234,11 @@ export function drawPlate(r, cx, cy, z, heading, c = {}, opts = {}) {
 	}
 	items.sort((a, b) => a.d - b.d);
 	for (const it of items) it.fn();
-	if (c.lid) drawLid(r, cx, cy, z, heading, s);
+	if (c.lid && c.lidOff) {
+		// A lid that did not snap on: lifted at one end and a little crooked.
+		const p = at(0.03, 0.02, 0.05);
+		drawLid(r, p[0], p[1], p[2] - 0.05 * s + 0.04 * s, heading + 0.12, s);
+	} else if (c.lid) drawLid(r, cx, cy, z, heading, s);
 	if (c.code) drawCode(r, cx, cy, z, heading, s, lw);
 	if ((c.pass || c.fail) && !opts.noBadge) {
 		const p = at(0, 0, c.lid ? 0.42 : 0.34);

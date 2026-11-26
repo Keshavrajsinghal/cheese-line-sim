@@ -1,10 +1,13 @@
 // Quick look: serve the site, open it at desktop and phone sizes, collect console errors, and
-// take screenshots of a few views. Usage: node look.mjs [outDir] [route ...]
+// take screenshots of a few views. Usage: node tools/look.mjs [outDir] [route ...]
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import { chromium } from "/Users/keshav/Desktop/cheese-line-sim/tests/node_modules/playwright/index.mjs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = "/Users/keshav/Desktop/cheese-line-sim";
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// Playwright is installed under tests/ (cd tests && npm ci --ignore-scripts).
+const { chromium } = await import(new URL("../tests/node_modules/playwright/index.mjs", import.meta.url).href);
 const OUT = process.argv[2] ?? "/tmp/cheese-line-shots";
 const ROUTES = process.argv.length > 3 ? process.argv.slice(3) : ["#/", "#/ride/line/denester", "#/ride/line/apples-b", "#/ride/line/cheese-b", "#/ride/line/inspect-1", "#/ride/line/outfeed", "#/person/operator-1", "#/place/rework-1", "#/section/throughput"];
 mkdirSync(OUT, { recursive: true });

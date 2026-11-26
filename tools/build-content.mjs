@@ -213,7 +213,7 @@ for (const e of entries) {
 		out.people.push({ id: e.id, title: f.title, role: f.role, where: f.where, html: blocks(body) });
 	} else if (e.kind === "Place") {
 		need(e, f, ["title"]);
-		out.places[e.id] = { title: f.title, html: blocks(body) };
+		out.places[e.id] = { title: f.title, short: f.short ?? f.title, html: blocks(body) };
 	} else if (e.kind === "Section") {
 		need(e, f, ["title"]);
 		out.sections[e.id] = { title: f.title, html: blocks(body) };
