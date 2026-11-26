@@ -146,7 +146,7 @@ async function main() {
 		// under the track there, and Operator 2 works beneath it).
 		const clear = [...LANES.map((l) => l.y), ...Object.values(REENTRY).map((r) => r.y)];
 		const skipColumn = (p) => p[1] > 43.0 || clear.some((y) => Math.abs(p[1] - y) < 0.9);
-		track.draw(scene, { group: RIDE_ID, spine: "#c9cfd6", column: "#9aa5b1", rail: "#c0442a", railHi: "#f08a6c", tie: "#6f7b87", skipColumn });
+		track.draw(scene, { group: RIDE_ID, spine: "#c9cfd6", column: "#9aa5b1", rail: "#c0442a", railHi: "#f08a6c", tie: "#6f7b87", skipColumn, live: true });
 		try {
 			rideModule.buildScenery(scene, ctx);
 		} catch (e) {

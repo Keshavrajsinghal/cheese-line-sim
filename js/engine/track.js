@@ -84,7 +84,8 @@ export class Track {
 
 	/**
 	 * Add rail drawing to a scene as short depth-sorted chunks.
-	 * opts: { group, rail, tie, spine, column, gauge, skipColumn(point) -> true to leave out a support }
+	 * opts: { group, rail, tie, spine, column, gauge, skipColumn(point) -> true to leave out a support,
+	 *   live: draw every frame so it sorts against moving things (a raised track over people and carts) }
 	 */
 	draw(scene, opts = {}) {
 		const rail = opts.rail ?? "#5b6472";
@@ -138,6 +139,7 @@ export class Track {
 			const columns = elevated ? chunk.filter((_, k) => (i0 + k) % 15 === 0 && chunk[k][2] > 0.5 && !opts.skipColumn?.(chunk[k])) : [];
 			scene.add({
 				group: opts.group,
+				live: !!opts.live,
 				layer: elevated ? 2 : 1,
 				bounds: [x0, y0, 0, x1, y1, zMax],
 				draw: (r) => {

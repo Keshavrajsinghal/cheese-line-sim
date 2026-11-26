@@ -168,8 +168,15 @@ const REENTRY_FRONT = { "rework-1": [REENTRY["rework-1"].x1 + 0.4, REENTRY["rewo
 // Full carts go toward the door at the far end; the spare empty cart waits on the other side, so
 // the pull-out and push-in paths do not cross.
 export const DISPATCH_FULL = [DISPATCH.x1 - 1.8, DISPATCH.y1 + 0.5]; // Operator 2 leaves a full cart at the door
-export const DISPATCH_EMPTY = [DISPATCH.x1 - 1.5, DISPATCH.y0 + 1.0]; // where the spare empty cart waits
-const AROUND_PARKED = [DISPATCH.x1 - 0.2, DISPATCH.y1 - 0.6]; // walk past the parked full cart on its far side
+// The spare empty cart waits lengthwise along the line, below slot 1 and beside the walkway past
+// Rework Table 2: out of the path of carts leaving the slots and of the parked full cart.
+export const DISPATCH_EMPTY = [19.2, 45.2];
+export const EMPTY_HEADING = Math.PI / 2;
+const WALL_SIDE = 20.85; // Operator 2 passes the spare cart on its wall side
+const AROUND_PARKED = [
+	[DISPATCH.x1 - 0.9, DISPATCH.y1 + 0.9],
+	[DISPATCH.x1 + 0.2, DISPATCH.y1 - 0.4],
+]; // round the parked full cart, through the doorway
 /** A cart is pushed or pulled this far from Operator 2's center (half a cart, the handle, the person). */
 export const CART_REACH = 1.8;
 /** A cart leaving or entering a slot is clear of the curtain and gantry posts once its center passes this x. */
@@ -280,10 +287,19 @@ function buildOp2(tMax) {
 			const dir2 = angle(exitOp, DISPATCH_FULL);
 			walkTo(DISPATCH_FULL, "push", { carry: "cart-full", task });
 			const out1 = t;
-			walkTo(AROUND_PARKED);
+			// Step away from the parked cart's front through the doorway, then down the wall side,
+			// clear of both the parked full cart and the spare empty one.
+			for (const w of AROUND_PARKED) walkTo(w);
 			const lineUp = [CART_CLEAR_X + 1.8, ys]; // the empty cart's center before it goes in
 			const dirA = angle(DISPATCH_EMPTY, lineUp);
-			walkTo([DISPATCH_EMPTY[0] - Math.cos(dirA) * CART_REACH, DISPATCH_EMPTY[1] - Math.sin(dirA) * CART_REACH]);
+			// Down the wall side past the spare, round its end, to its handle; then swing it round
+			// (it pivots about Operator 2) to face the slot.
+			const behind = [DISPATCH_EMPTY[0] - Math.cos(EMPTY_HEADING) * CART_REACH, DISPATCH_EMPTY[1] - Math.sin(EMPTY_HEADING) * CART_REACH];
+			walkTo([WALL_SIDE, DISPATCH_EMPTY[1] + 3.1]);
+			walkTo([WALL_SIDE, behind[1] - 0.2]);
+			walkTo(behind);
+			const grab0 = t;
+			act("grab", 1.6, dirA, { carry: "cart-empty", task });
 			const in0 = t;
 			walkTo([lineUp[0] - Math.cos(dirA) * CART_REACH, lineUp[1] - Math.sin(dirA) * CART_REACH], "push", { carry: "cart-empty", task });
 			const inMid = t;
@@ -292,7 +308,7 @@ function buildOp2(tMax) {
 			walkTo(slot, "push", { carry: "cart-empty", task });
 			const in1 = t;
 			act("latch", 1.5, Math.PI, { task });
-			swaps.push({ cart: e.cart, slot: e.slot, ys, unl0, out0, outMid, dir2, out1, in0, dirA, lineUp, inMid, inTurn, in1, lat1: t });
+			swaps.push({ cart: e.cart, slot: e.slot, ys, unl0, out0, outMid, dir2, out1, behind, grab0, in0, dirA, lineUp, inMid, inTurn, in1, lat1: t });
 		}
 	}
 	walkTo(post);
@@ -326,7 +342,7 @@ const TURN = 1.2; // seconds for a cart to swing round behind Operator 2 at a co
  * them to a point lined up with the slot, then straight in). pos is the cart's center [x, y];
  * heading is the direction the cart is moving (0 = +x; PI = into the slot).
  * Also returns `parked` (a full cart waiting in dispatch staging for dispatch to collect),
- * `emptyWaiting` (whether the spare empty cart stands at `emptyPos`).
+ * `emptyWaiting` (whether the spare empty cart stands at `emptyPos`, lengthwise at `emptyHeading`).
  */
 export function carts(t) {
 	const o = buildOp2(t);
@@ -363,7 +379,12 @@ export function carts(t) {
 			const h = lerpAngle(0, sw.dir2, (t - sw.outMid) / TURN);
 			return leaving([p.x - Math.cos(h) * R, p.y - Math.sin(h) * R], h);
 		}
-		if (t < sw.in0) return { cart: c + 2, count: 0, phase: "empty", pos: null, heading: 0 };
+		if (t < sw.grab0) return { cart: c + 2, count: 0, phase: "empty", pos: null, heading: 0 };
+		if (t < sw.in0) {
+			// Operator 2 holds the handle and swings the cart round to face the slot.
+			const h = lerpAngle(EMPTY_HEADING, sw.dirA, (t - sw.grab0) / (sw.in0 - sw.grab0));
+			return arriving([sw.behind[0] + Math.cos(h) * R, sw.behind[1] + Math.sin(h) * R], h);
+		}
 		if (t < sw.inMid) {
 			const p = op2(t);
 			return arriving([p.x + Math.cos(sw.dirA) * R, p.y + Math.sin(sw.dirA) * R], sw.dirA);
@@ -378,7 +399,7 @@ export function carts(t) {
 	// A full cart waits in dispatch staging for a while after it is left there, then dispatch takes it.
 	const last = o.swaps.filter((x) => t >= x.out1 && t < x.out1 + 90).pop();
 	const parked = last ? [{ pos: [DISPATCH_FULL[0] - Math.cos(last.dir2) * R, DISPATCH_FULL[1] - Math.sin(last.dir2) * R], heading: last.dir2, full: true, cart: last.cart }] : [];
-	return { slots, parked, emptyWaiting, emptyPos: DISPATCH_EMPTY };
+	return { slots, parked, emptyWaiting, emptyPos: DISPATCH_EMPTY, emptyHeading: EMPTY_HEADING };
 }
 
 /** Rejects sitting on a rework table at time t: [{m, since}] (picked up when Operator 2 starts fixing). */

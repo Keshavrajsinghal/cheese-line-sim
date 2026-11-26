@@ -15,3 +15,5 @@ Choices made where the process design did not say, with one line of reasoning ea
 - Fixed plates rejoin the accumulation conveyor through a short re-entry chute in the front guard, ahead of each camera: the design has Operator 2 set them back ahead of the camera without opening a guard door.
 - Full carts roll out of the front of each slot, through its light curtain, to dispatch staging at the end of the room; Operator 2 brings the spare empty cart back the same way.
 - Every person wears a white coat, hairnet, gloves, and boots, plus a colored vest per role, so viewers can tell them apart.
+- Feeder fill levels (stacks, hoppers, magazines) follow Operator 1's compressed refill loop, not an exact count of items used, so a stack can shrink faster than the releases you see: the levels show the refill rhythm, and the exact intervals are in the supply table.
+- The cracker chute sits beside the pick-and-place unit, near the plate as the design's timing assumes, and Operator 1 fills it through the back-guard opening by a short keyed infeed belt.

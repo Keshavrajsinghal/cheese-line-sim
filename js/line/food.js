@@ -169,8 +169,10 @@ export function badge(r, x, y, z, ok = true, s = 1) {
 
 export const SPOT = {
 	grapes: { f: -0.19, sd: 0.0, rot: Math.PI }, // left end, stem toward the tray's end wall
-	// Slices stand in a row across the tray between the grapes and the pack; the row leans toward +sd.
-	apples: [-0.12, -0.05, 0.02, 0.09].map((sd, i) => ({ f: -0.055, sd, tilt: i < 2 ? 0.18 : 0.32 })),
+	// Slices stand in a row across the tray between the grapes and the pack, all leaning toward -sd:
+	// robot A's slices 1-2 first, then robot B's slices 3-4 leaning on them (negative tilt leans
+	// toward -sd in drawSlice).
+	apples: [-0.13, -0.07, -0.01, 0.05].map((sd, i) => ({ f: -0.055, sd, tilt: i < 2 ? -0.2 : -0.32 })),
 	crackers: { f: 0.07, sd: 0.02, rot: 0.6 }, // diagonal, in the center
 	cheese: [
 		{ f: 0.2, sd: -0.1, rot: 2.6, layer: 0, kind: 0 }, // robot A: bottom, firm

@@ -63,9 +63,9 @@ export const STOP_Y = {
 export const STATION = {
 	denester: { x0: 9.6, x1: 12.8, y0: 5.6, y1: 8.4 }, // magazine loads from the head aisle
 	grapes: { x0: 6.0, x1: 12.4, y0: 9.4, y1: 12.2, destacker: [6.0, 7.6], camera: 8.4, robot: [10.4, 10.6] },
-	apples: { x0: 6.0, x1: 12.4, y0: 12.9, y1: 17.2, hopper: [6.0, 7.4], pickBelt: [9.4, 10.1], robotA: [9.0, 13.6], robotB: [9.0, 16.6], returnTote: [8.0, 17.6] },
+	apples: { x0: 6.0, x1: 12.4, y0: 12.9, y1: 17.2, hopper: [6.0, 7.4], pickBelt: [9.4, 10.1], robotA: [9.0, 13.6], robotB: [9.0, 16.6], returnTote: [9.75, 17.6] }, // hopper and pickBelt are x ranges
 	crackers: { x0: 6.0, x1: 12.4, y0: 18.6, y1: 20.6, magazine: [9.0, 19.6], unit: [10.2, 19.6] },
-	cheese: { x0: 6.0, x1: 12.4, y0: 21.6, y1: 26.0, lanes: [21.9, 23.0, 24.1, 25.2], robotA: [10.2, 23.2], robotB: [10.2, 25.0] },
+	cheese: { x0: 6.0, x1: 12.4, y0: 21.6, y1: 26.0, lanes: [21.9, 23.0, 24.1, 25.2], robotA: [10.3, 22.45], robotB: [10.3, 24.65] }, // each delta hangs between its two lanes
 	accumulation: { x0: 10.6, x1: 11.8, y0: INDEX_END, y1: 45.6 },
 	inspect1: { x0: 9.8, x1: 12.6, y0: 33.0, y1: 35.0 },
 	lidding: { x0: 7.0, x1: 12.6, y0: 37.2, y1: 39.4, magazine: [7.6, 38.2] }, // lid magazine loads from the aisle
