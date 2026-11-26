@@ -5,6 +5,7 @@
 
 import { IsoRenderer } from "../engine/iso.js";
 import { buildBelts, buildTrays } from "./belts.js";
+import { CYCLE, MOVE } from "./clock.js";
 import { drawPlate, PLATE_AFTER } from "./food.js";
 import { HEADING, STOP_Y, TRACK } from "./layout.js";
 import { STATION_BUILDERS } from "./stations.js";
@@ -29,7 +30,9 @@ export default {
 	},
 
 	buildScenery(scene, ctx) {
-		const T = (t) => (ctx.reducedMotion() ? FROZEN : t);
+		// Line time starts in steady state (step 40), so every tray on screen has a history: the
+		// carts hold its plates and the rework tables its rejects.
+		const T = (t) => (ctx.reducedMotion() ? FROZEN : t + START);
 		buildBelts(scene, ctx);
 		buildTrays(scene, ctx, T);
 		for (const build of STATION_BUILDERS) build(scene, ctx, T);
@@ -75,5 +78,6 @@ export default {
 	},
 };
 
+const START = 40 * CYCLE;
 /** Pose shown when motion is reduced: mid-step, robots busy, trays still. */
-const FROZEN = 7.37 * 40 + 1.5 + 2.1;
+const FROZEN = START + MOVE + 2.1;

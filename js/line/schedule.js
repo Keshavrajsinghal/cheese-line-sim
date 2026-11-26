@@ -53,15 +53,24 @@ export const FEEDERS = [
 	{ id: "denester", stock: "trays" },
 ];
 
+const HEAD_CORNER = [4.3, 4.0];
+
 function buildOp1() {
 	const segs = [];
 	let t = 0;
 	let at = POSTS["operator-1"];
-	const walkTo = (to, carry) => {
+	const step = (to, carry) => {
 		const d = dist(at, to);
 		if (d > 0.01) segs.push({ t0: t, t1: t + d / WALK, from: at, to, kind: "walk", carry });
 		t += d / WALK;
 		at = to;
+	};
+	// The supply aisle is an L: the back aisle (x < 5.6) and the head aisle (y < 5.2). Walks between
+	// them go round the inside corner, never across the guarded head of the line.
+	const inHead = (p) => p[1] < 5.4 && p[0] > 5.6;
+	const walkTo = (to, carry) => {
+		if (inHead(at) !== inHead(to)) step(HEAD_CORNER, carry);
+		step(to, carry);
 	};
 	const act = (kind, dur, facing, extra = {}) => {
 		segs.push({ t0: t, t1: t + dur, from: at, to: at, kind, facing, ...extra });
@@ -156,10 +165,57 @@ function rejectArrivals(which, tMax) {
 const SLOT_FRONT = CART_SLOTS.map((s) => [s.curtain + 0.9, (s.y0 + s.y1) / 2]);
 const TABLE_FRONT = { "rework-1": [REWORK["rework-1"].x1 + 0.5, (REWORK["rework-1"].y0 + REWORK["rework-1"].y1) / 2], "rework-2": [REWORK["rework-2"].x1 + 0.5, (REWORK["rework-2"].y0 + REWORK["rework-2"].y1) / 2] };
 const REENTRY_FRONT = { "rework-1": [REENTRY["rework-1"].x1 + 0.4, REENTRY["rework-1"].y], "rework-2": [REENTRY["rework-2"].x1 + 0.4, REENTRY["rework-2"].y] };
-export const DISPATCH_FULL = [DISPATCH.x0 + 1.4, DISPATCH.y0 + 2.0]; // where full carts are left
-export const DISPATCH_EMPTY = [DISPATCH.x1 - 1.4, DISPATCH.y1 - 2.0]; // where empty carts wait
+// Full carts go toward the door at the far end; the spare empty cart waits on the other side, so
+// the pull-out and push-in paths do not cross.
+export const DISPATCH_FULL = [DISPATCH.x1 - 1.8, DISPATCH.y1 + 0.5]; // Operator 2 leaves a full cart at the door
+export const DISPATCH_EMPTY = [DISPATCH.x1 - 1.5, DISPATCH.y0 + 1.0]; // where the spare empty cart waits
+const AROUND_PARKED = [DISPATCH.x1 - 0.2, DISPATCH.y1 - 0.6]; // walk past the parked full cart on its far side
+/** A cart is pushed or pulled this far from Operator 2's center (half a cart, the handle, the person). */
+export const CART_REACH = 1.8;
+/** A cart leaving or entering a slot is clear of the curtain and gantry posts once its center passes this x. */
+const CART_CLEAR_X = 14.6;
 const SWAP_DELAY = 6; // seconds after a cart fills before Operator 2 starts the swap
 const FIX = 9; // seconds to fix a plate at a rework table
+
+
+/** Rework table plus its reject lane: Operator 2 walks round these blocks, in front of the tables. */
+const BLOCKS = ["rework-1", "rework-2"].map((id) => ({ x0: 11.6, x1: REWORK[id].x1 + 0.2, y0: REWORK[id].y0 - 0.2, y1: REWORK[id].y1 + 0.2 }));
+const DETOUR_X = 17.6;
+
+/** Does the segment a-b pass through rectangle b? (Liang-Barsky) */
+function crosses(a, b, r) {
+	let t0 = 0;
+	let t1 = 1;
+	const dx = b[0] - a[0];
+	const dy = b[1] - a[1];
+	for (const [p, q] of [
+		[-dx, a[0] - r.x0],
+		[dx, r.x1 - a[0]],
+		[-dy, a[1] - r.y0],
+		[dy, r.y1 - a[1]],
+	]) {
+		if (p === 0) {
+			if (q < 0) return false;
+			continue;
+		}
+		const k = q / p;
+		if (p < 0) t0 = Math.max(t0, k);
+		else t1 = Math.min(t1, k);
+		if (t0 > t1) return false;
+	}
+	return t1 - t0 > 1e-6;
+}
+
+/** Waypoints that take a walk from a to b round the table blocks it would cross, in order. */
+function detour(a, b) {
+	const pts = [];
+	for (const blk of BLOCKS) {
+		if (!crosses(a, b, blk)) continue;
+		for (const y of [blk.y0 - 0.35, blk.y1 + 0.35]) if ((y - a[1]) * (y - b[1]) < 0) pts.push([DETOUR_X, y]);
+	}
+	pts.sort((p, q) => Math.abs(p[1] - a[1]) - Math.abs(q[1] - a[1]));
+	return pts;
+}
 
 let OP2 = null;
 /** Build Operator 2's timeline far enough to cover time tMax. Deterministic; cached. */
@@ -175,11 +231,18 @@ function buildOp2(tMax) {
 	const post = POSTS["operator-2"];
 	let at = post;
 	let t = 0;
-	const walkTo = (to, kind = "walk", extra = {}) => {
+	const step = (to, kind, extra) => {
 		const d = dist(at, to);
-		if (d > 0.01) segs.push({ t0: t, t1: t + d / (kind === "push" ? WALK * 0.7 : WALK), from: at, to, kind, ...extra });
-		t += d / (kind === "push" ? WALK * 0.7 : WALK);
+		const v = kind === "push" ? WALK * 0.7 : WALK;
+		if (d > 0.01) segs.push({ t0: t, t1: t + d / v, from: at, to, kind, ...extra });
+		t += d / v;
 		at = to;
+	};
+	// Walks (not cart pushes) detour in front of the rework tables, whose reject lanes run back to
+	// the guard: past each table block via the corners just in front of it.
+	const walkTo = (to, kind = "walk", extra = {}) => {
+		if (kind !== "push") for (const w of detour(at, to)) step(w, kind, extra);
+		step(to, kind, extra);
 	};
 	const act = (kind, dur, facing, extra = {}) => {
 		segs.push({ t0: t, t1: t + dur, from: at, to: at, kind, facing, ...extra });
@@ -201,19 +264,35 @@ function buildOp2(tMax) {
 			act("return", 1.5, Math.PI, { carry: "plate", task: e.table });
 			fixes.push({ table: e.table, m: e.m, arrive: e.t, pick: start, back: t });
 		} else {
+			// Carts cross the curtain line only straight along x at the slot's y: pull the full cart
+			// straight out until it clears the posts, then turn toward dispatch; bring the empty cart
+			// to a point lined up with the slot, step behind it, and push it straight in.
 			const slot = SLOT_FRONT[e.slot];
+			const ys = slot[1];
+			const task = `slot-${e.slot + 1}`;
 			walkTo(slot);
 			const unl0 = t;
-			act("unlatch", 1.5, Math.PI, { task: `slot-${e.slot + 1}` });
+			act("unlatch", 1.5, Math.PI, { task });
 			const out0 = t;
-			walkTo(DISPATCH_FULL, "push", { carry: "cart-full", task: `slot-${e.slot + 1}` });
+			const exitOp = [CART_CLEAR_X + CART_REACH, ys];
+			walkTo(exitOp, "push", { carry: "cart-full", task });
+			const outMid = t;
+			const dir2 = angle(exitOp, DISPATCH_FULL);
+			walkTo(DISPATCH_FULL, "push", { carry: "cart-full", task });
 			const out1 = t;
-			walkTo(DISPATCH_EMPTY);
+			walkTo(AROUND_PARKED);
+			const lineUp = [CART_CLEAR_X + 1.8, ys]; // the empty cart's center before it goes in
+			const dirA = angle(DISPATCH_EMPTY, lineUp);
+			walkTo([DISPATCH_EMPTY[0] - Math.cos(dirA) * CART_REACH, DISPATCH_EMPTY[1] - Math.sin(dirA) * CART_REACH]);
 			const in0 = t;
-			walkTo(slot, "push", { carry: "cart-empty", task: `slot-${e.slot + 1}` });
+			walkTo([lineUp[0] - Math.cos(dirA) * CART_REACH, lineUp[1] - Math.sin(dirA) * CART_REACH], "push", { carry: "cart-empty", task });
+			const inMid = t;
+			walkTo([lineUp[0] + CART_REACH, ys], "walk", { task }); // step around behind it
+			const inTurn = t;
+			walkTo(slot, "push", { carry: "cart-empty", task });
 			const in1 = t;
-			act("latch", 1.5, Math.PI, { task: `slot-${e.slot + 1}` });
-			swaps.push({ cart: e.cart, slot: e.slot, unl0, out0, out1, in0, in1, lat1: t });
+			act("latch", 1.5, Math.PI, { task });
+			swaps.push({ cart: e.cart, slot: e.slot, ys, unl0, out0, outMid, dir2, out1, in0, dirA, lineUp, inMid, inTurn, in1, lat1: t });
 		}
 	}
 	walkTo(post);
@@ -228,23 +307,32 @@ export function op2(t) {
 	return poseOf(find(o.segs, t), t);
 }
 
-/** A cart is pushed or pulled about this far from Operator 2's center. */
-export const CART_REACH = 1.15;
 const unit = (a) => [Math.cos(a), Math.sin(a)];
+
+/** Angle from a toward b, taking the short way round. */
+const lerpAngle = (a, b, k) => {
+	let d = b - a;
+	while (d > Math.PI) d -= 2 * Math.PI;
+	while (d < -Math.PI) d += 2 * Math.PI;
+	return a + d * Math.min(1, Math.max(0, k));
+};
+const TURN = 1.2; // seconds for a cart to swing round behind Operator 2 at a corner
 
 /**
  * State of each cart slot at time t: { cart, count, phase, pos, heading } where phase is
  * "filling" (in the slot, the gantry placing), "full" (waiting for Operator 2), "leaving" (Operator 2
- * pulls it out of the slot and to dispatch staging, the cart trailing behind them), "empty" (no
- * cart in the slot), or "arriving" (Operator 2 pushes an empty cart in front of them, then slides
- * it into the slot). pos is the cart's center [x, y]; heading the direction it is moving.
- * Also returns `parked` (full carts waiting in dispatch staging for dispatch to collect) and
- * `emptyWaiting` (whether the spare empty cart stands in dispatch staging).
+ * pulls it straight out of the slot, then to dispatch staging, the cart trailing CART_REACH behind
+ * them), "empty" (no cart in the slot), or "arriving" (Operator 2 pushes the empty cart in front of
+ * them to a point lined up with the slot, then straight in). pos is the cart's center [x, y];
+ * heading is the direction the cart is moving (0 = +x; PI = into the slot).
+ * Also returns `parked` (a full cart waiting in dispatch staging for dispatch to collect),
+ * `emptyWaiting` (whether the spare empty cart stands at `emptyPos`).
  */
 export function carts(t) {
 	const o = buildOp2(t);
 	const placed = platesBy(t);
 	let emptyWaiting = true;
+	const R = CART_REACH;
 	const slots = CART_SLOTS.map((s, i) => {
 		const center = [(s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2];
 		// The cart in (or belonging to) this slot: advance past carts whose replacement is latched in.
@@ -257,36 +345,39 @@ export function carts(t) {
 		const sw = o.swaps.find((x) => x.cart === c);
 		const count = Math.max(0, Math.min(PER_CART, placed - c * PER_CART));
 		if (!sw || t < sw.unl0) return { cart: c, count, phase: count >= PER_CART ? "full" : "filling", pos: center, heading: 0 };
+		const ys = sw.ys;
 		const slotFront = SLOT_FRONT[i];
-		const outDir = angle(slotFront, DISPATCH_FULL);
-		const [ux, uy] = unit(outDir);
-		const pullStart = [slotFront[0] - ux * CART_REACH, slotFront[1] - uy * CART_REACH];
-		if (t < sw.out0) return { cart: c, count: PER_CART, phase: "leaving", pos: lerp2(center, pullStart, (t - sw.unl0) / (sw.out0 - sw.unl0)), heading: 0 };
+		const pulled = [slotFront[0] - R, ys]; // cart center once unlatched, Operator 2 at the slot front
+		const leaving = (pos, heading) => ({ cart: c, count: PER_CART, phase: "leaving", pos, heading });
+		const arriving = (pos, heading) => {
+			emptyWaiting = false;
+			return { cart: c + 2, count: 0, phase: "arriving", pos, heading };
+		};
+		if (t < sw.out0) return leaving(lerp2(center, pulled, (t - sw.unl0) / (sw.out0 - sw.unl0)), 0);
+		if (t < sw.outMid) {
+			const p = op2(t);
+			return leaving([p.x - R, ys], 0);
+		}
 		if (t < sw.out1) {
 			const p = op2(t);
-			const [dx, dy] = unit(p.facing);
-			return { cart: c, count: PER_CART, phase: "leaving", pos: [p.x - dx * CART_REACH, p.y - dy * CART_REACH], heading: p.facing };
+			const h = lerpAngle(0, sw.dir2, (t - sw.outMid) / TURN);
+			return leaving([p.x - Math.cos(h) * R, p.y - Math.sin(h) * R], h);
 		}
 		if (t < sw.in0) return { cart: c + 2, count: 0, phase: "empty", pos: null, heading: 0 };
-		if (t < sw.in1) {
-			emptyWaiting = false;
+		if (t < sw.inMid) {
 			const p = op2(t);
-			const [dx, dy] = unit(p.facing);
-			return { cart: c + 2, count: 0, phase: "arriving", pos: [p.x + dx * CART_REACH, p.y + dy * CART_REACH], heading: p.facing };
+			return arriving([p.x + Math.cos(sw.dirA) * R, p.y + Math.sin(sw.dirA) * R], sw.dirA);
 		}
-		emptyWaiting = false;
-		const inDir = angle(DISPATCH_EMPTY, slotFront);
-		const [vx, vy] = unit(inDir);
-		const pushEnd = [slotFront[0] + vx * CART_REACH, slotFront[1] + vy * CART_REACH];
-		return { cart: c + 2, count: 0, phase: "arriving", pos: lerp2(pushEnd, center, (t - sw.in1) / (sw.lat1 - sw.in1)), heading: inDir };
+		if (t < sw.inTurn) return arriving(sw.lineUp, lerpAngle(sw.dirA, Math.PI, (t - sw.inMid) / Math.max(0.3, sw.inTurn - sw.inMid)));
+		if (t < sw.in1) {
+			const p = op2(t);
+			return arriving([p.x - R, ys], Math.PI);
+		}
+		return arriving(lerp2(pulled, center, (t - sw.in1) / (sw.lat1 - sw.in1)), Math.PI);
 	});
 	// A full cart waits in dispatch staging for a while after it is left there, then dispatch takes it.
 	const last = o.swaps.filter((x) => t >= x.out1 && t < x.out1 + 90).pop();
-	let parked = [];
-	if (last) {
-		const [ux, uy] = unit(angle(SLOT_FRONT[last.slot], DISPATCH_FULL));
-		parked = [{ pos: [DISPATCH_FULL[0] - ux * CART_REACH, DISPATCH_FULL[1] - uy * CART_REACH], full: true, cart: last.cart }];
-	}
+	const parked = last ? [{ pos: [DISPATCH_FULL[0] - Math.cos(last.dir2) * R, DISPATCH_FULL[1] - Math.sin(last.dir2) * R], heading: last.dir2, full: true, cart: last.cart }] : [];
 	return { slots, parked, emptyWaiting, emptyPos: DISPATCH_EMPTY };
 }
 

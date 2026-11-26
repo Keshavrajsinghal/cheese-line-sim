@@ -219,8 +219,49 @@ export function initPanel(app) {
 		} else if (kind === "section") {
 			const s = C.sections[id];
 			setHead(C.meta.title, s.title);
-			body.append(backButtons(), prose(s.html, "section-text"));
+			body.append(backButtons(), id === "throughput" ? stepChart(s.html) : null, prose(s.html, "section-text"));
 		}
+	}
+
+	/**
+	 * A bar chart of each station's work per plate, read from the step-time table in the throughput
+	 * section (the table whose header mentions "Work per plate"), so it always matches the text.
+	 */
+	function stepChart(html) {
+		const doc = new DOMParser().parseFromString(html, "text/html");
+		const table = [...doc.querySelectorAll("table")].find((t) => /work per plate/i.test(t.querySelector("thead")?.textContent ?? ""));
+		if (!table) return null;
+		const heads = [...table.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+		const rows = [...table.querySelectorAll("tbody tr")]
+			.map((tr) => [...tr.children].map((td) => td.textContent.trim()))
+			.map((cells) => ({ name: cells[0], work: parseFloat(cells[1]) }))
+			.filter((r) => Number.isFinite(r.work));
+		if (!rows.length) return null;
+		const max = Math.max(...rows.map((r) => r.work));
+		const W = 400;
+		const rowH = 24;
+		const labelW = 150;
+		const barW = W - labelW - 46;
+		const svgNS = "http://www.w3.org/2000/svg";
+		const svg = document.createElementNS(svgNS, "svg");
+		svg.setAttribute("viewBox", `0 0 ${W} ${rows.length * rowH + 6}`);
+		svg.setAttribute("class", "step-chart-svg");
+		svg.setAttribute("role", "img");
+		svg.setAttribute("aria-label", `${heads[1] ?? ""}: ${rows.map((r) => `${r.name} ${r.work}`).join(", ")}`);
+		rows.forEach((r, i) => {
+			const y = i * rowH + 3;
+			const mk = (tag, attrs, text) => {
+				const el = document.createElementNS(svgNS, tag);
+				for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+				if (text !== undefined) el.textContent = text;
+				svg.append(el);
+			};
+			const slowest = r.work === max;
+			mk("text", { x: labelW - 8, y: y + rowH / 2 + 4, "text-anchor": "end", class: `sc-label${slowest ? " sc-max" : ""}` }, r.name);
+			mk("rect", { x: labelW, y: y + 4, width: Math.max(2, (r.work / max) * barW), height: rowH - 8, rx: 3, class: slowest ? "sc-bar sc-max" : "sc-bar" });
+			mk("text", { x: labelW + (r.work / max) * barW + 5, y: y + rowH / 2 + 4, class: `sc-val${slowest ? " sc-max" : ""}` }, r.work.toFixed(2));
+		});
+		return h("figure", { class: "card step-chart" }, h("figcaption", { class: "card-kicker" }, heads[1] ?? ""), svg);
 	}
 
 	/** Selector that finds the same control after a re-render ("" when there is none). */

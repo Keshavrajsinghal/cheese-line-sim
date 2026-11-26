@@ -77,7 +77,7 @@ export const PLACE = {
 
 /** Rejects, so both rework tables see traffic (the design assumes 2% and 1%; shown more often). */
 export const isReject1 = (m) => ((m % 17) + 17) % 17 === 5; // short one cheese wedge (brie missing)
-export const isReject2 = (m) => ((m % 29) + 29) % 29 === 11; // lid not seated
+export const isReject2 = (m) => ((m % 29) + 29) % 29 === 11 && !isReject1(m); // lid not seated (never a tray already pushed off at the first inspection)
 
 const count = (k, u, pos, times) => {
 	if (k < pos) return 0;

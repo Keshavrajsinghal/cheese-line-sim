@@ -10,7 +10,7 @@ import { RideRunner, SPEEDS } from "./engine/ride-runner.js";
 import { Scene } from "./engine/scene.js";
 import { Track } from "./engine/track.js";
 import { PAL } from "./line/common.js";
-import { LIMITS } from "./line/layout.js";
+import { LANES, LIMITS, REENTRY } from "./line/layout.js";
 import { buildPlant } from "./line/plant.js";
 import rideModule from "./line/ride.js";
 import { initControls } from "./ui/controls.js";
@@ -142,7 +142,11 @@ async function main() {
 		scene.clear();
 		app.focusPoints.clear();
 		buildPlant(scene);
-		track.draw(scene, { group: RIDE_ID, spine: "#c9cfd6", column: "#9aa5b1", rail: "#c0442a", railHi: "#f08a6c", tie: "#6f7b87" });
+		// No track supports over the reject lanes, the re-entry chutes, or the outfeed (carts roll out
+		// under the track there, and Operator 2 works beneath it).
+		const clear = [...LANES.map((l) => l.y), ...Object.values(REENTRY).map((r) => r.y)];
+		const skipColumn = (p) => p[1] > 43.0 || clear.some((y) => Math.abs(p[1] - y) < 0.9);
+		track.draw(scene, { group: RIDE_ID, spine: "#c9cfd6", column: "#9aa5b1", rail: "#c0442a", railHi: "#f08a6c", tie: "#6f7b87", skipColumn });
 		try {
 			rideModule.buildScenery(scene, ctx);
 		} catch (e) {
@@ -298,9 +302,9 @@ async function main() {
 	for (const sel of ["#hud", "#panel", "#controls", "#route-drawer"]) ro.observe($(sel));
 	window.addEventListener("resize", () => app.layoutChanged());
 
+	/** The whole room in view: the line from the denester to dispatch, both aisles, the corridor. */
 	function overviewCamera(instant) {
-		const phone = app.isPhone();
-		scene.lookAt(phone ? 10 : 11, phone ? 26 : 27, 0, { zoom: phone ? 0.42 : 0.72, instant });
+		scene.fitWorldRect([1, 1, 21, 55], { instant, pad: app.isPhone() ? 1.15 : 1.0, height: 1.2 });
 	}
 
 	function selectRide(stopId = null, jump = false) {

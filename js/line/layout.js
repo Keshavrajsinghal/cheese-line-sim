@@ -95,7 +95,7 @@ export const CART_SLOTS = [
 	{ id: "slot-1", x0: 9.0, x1: 12.4, y0: 46.4, y1: 49.4, curtain: 12.7 },
 	{ id: "slot-2", x0: 9.0, x1: 12.4, y0: 49.9, y1: 52.9, curtain: 12.7 },
 ];
-export const DISPATCH = { x0: 15.4, x1: 20.4, y0: 47.0, y1: 54.6 };
+export const DISPATCH = { x0: 15.4, x1: 20.4, y0: 47.0, y1: 55.8 };
 
 // Controller cabinet (heated, outside the cold room) and the technician's spot.
 export const CABINET = { x0: 22.0, x1: 23.0, y0: 9.0, y1: 15.0 };
@@ -104,7 +104,7 @@ export const CABINET = { x0: 22.0, x1: 23.0, y0: 9.0, y1: 15.0 };
 export const POSTS = {
 	"operator-1": [4.2, 21.0],
 	"operator-2": [17.8, 41.0],
-	technician: [23.8, 16.2],
+	technician: [23.7, 13.5], // in front of the cabinet doors
 };
 /** Refill points along the supply aisle: where Operator 1 stands to load each feeder. */
 export const REFILL = {

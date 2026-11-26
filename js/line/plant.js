@@ -4,7 +4,7 @@
 
 import { LAYER } from "../engine/scene.js";
 import { guardRun, object, PAL } from "./common.js";
-import { AISLE, CART_SLOTS, DISPATCH, DOOR, GUARD, HEAD_AISLE, LANES, ROOM, STAGING, STATION, WARM } from "./layout.js";
+import { AISLE, CART_SLOTS, DISPATCH, DOOR, GUARD, HEAD_AISLE, LANES, REENTRY, ROOM, STAGING, STATION, WARM } from "./layout.js";
 
 const G = "plant";
 
@@ -200,15 +200,17 @@ function buildGuard(scene) {
 	for (let y = GUARD.head; y < 46; y += 4) {
 		const y1 = Math.min(46, y + 4);
 		const gaps = backGaps.map(([a, b]) => [a - y, b - y]).filter(([a, b]) => b > 0 && a < y1 - y);
-		object(scene, bx - 0.1, y, bx + 0.1, y1, h, (r) => guardRun(r, bx, y, bx, y1, h, { gaps }), { group: G });
+		// live: people in the aisle stand behind the back guard and must sort against it.
+		object(scene, bx - 0.1, y, bx + 0.1, y1, h, (r) => guardRun(r, bx, y, bx, y1, h, { gaps }), { group: G, live: true });
 	}
 	// Head of the line: the denester magazine opens to the head aisle.
 	const denGap = [[STATION.denester.x0 - bx + 0.3, STATION.denester.x1 - bx - 0.3]];
-	object(scene, bx, GUARD.head - 0.1, fx, GUARD.head + 0.1, h, (r) => guardRun(r, bx, GUARD.head, fx, GUARD.head, h, { gaps: denGap }), { group: G });
-	// Front guard: openings only for the reject lanes and at the cart slots (light curtains).
+	object(scene, bx, GUARD.head - 0.1, fx, GUARD.head + 0.1, h, (r) => guardRun(r, bx, GUARD.head, fx, GUARD.head, h, { gaps: denGap }), { group: G, live: true });
+	// Front guard: openings only for the reject lanes and the re-entry chutes (the cart slots have light curtains).
 	for (let y = GUARD.head; y < 45.6; y += 4) {
 		const y1 = Math.min(45.6, y + 4);
-		const gaps = LANES.map((l) => [l.y - 0.45 - y, l.y + 0.45 - y]).filter(([a, b]) => b > 0 && a < y1 - y);
+		const openings = [...LANES.map((l) => [l.y - 0.45, l.y + 0.45]), ...Object.values(REENTRY).map((e) => [e.y - 0.4, e.y + 0.4])];
+		const gaps = openings.map(([a, b]) => [a - y, b - y]).filter(([a, b]) => b > 0 && a < y1 - y);
 		object(scene, fx - 0.1, y, fx + 0.1, y1, h, (r) => guardRun(r, fx, y, fx, y1, h, { gaps }), { group: G, live: true });
 	}
 	// Back of the outfeed and the far end.

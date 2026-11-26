@@ -50,29 +50,40 @@ export const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
 /**
  * A guard fence run from (x0,y0) to (x1,y1) (axis-aligned): yellow posts, clear panels.
- * opts.gaps: [[a, b], ...] spans along the run left open (feeder loading openings, lanes).
+ * opts.gaps: [[a, b], ...] spans along the run (distance from the start) left open, such as feeder
+ * loading openings and reject lanes. Panels are cut exactly at each gap, with a post at each edge.
  */
 export function guardRun(r, x0, y0, x1, y1, h = 1.85, opts = {}) {
 	const alongY = x0 === x1;
 	const len = alongY ? y1 - y0 : x1 - x0;
 	const at = (s, z) => (alongY ? [x0, y0 + s, z] : [x0 + s, y0, z]);
-	const gaps = opts.gaps ?? [];
-	const open = (s) => gaps.some(([a, b]) => s > a + 0.02 && s < b - 0.02);
+	const gaps = (opts.gaps ?? []).map(([a, b]) => [Math.max(0, a), Math.min(len, b)]).filter(([a, b]) => b > a);
+	const inGap = (s) => gaps.some(([a, b]) => s > a + 0.01 && s < b - 0.01);
 	const step = 1.2;
-	const posts = [];
-	for (let s = 0; s <= len + 1e-6; s += step) posts.push(Math.min(s, len));
-	for (let k = 0; k < posts.length - 1; k++) {
-		const a = posts[k];
-		const b = posts[k + 1];
-		const mid = (a + b) / 2;
-		if (open(mid)) continue;
-		const lo = opts.low ?? 0.15;
+	const posts = new Set();
+	for (let s = 0; s <= len + 1e-6; s += step) posts.add(+Math.min(s, len).toFixed(3));
+	posts.add(+len.toFixed(3));
+	for (const [a, b] of gaps) {
+		if (a > 0.05) posts.add(+a.toFixed(3));
+		if (b < len - 0.05) posts.add(+b.toFixed(3));
+	}
+	const sorted = [...posts].filter((s) => !inGap(s)).sort((a, b) => a - b);
+	const lo = opts.low ?? 0.15;
+	for (let k = 0; k < sorted.length - 1; k++) {
+		const a = sorted[k];
+		const b = sorted[k + 1];
+		if (b - a < 0.05 || inGap((a + b) / 2)) continue;
 		r.quad([at(a + 0.04, lo), at(b - 0.04, lo), at(b - 0.04, h - 0.08), at(a + 0.04, h - 0.08)], PAL.guardPanel, { alpha: 0.38, edge: "rgba(120,150,170,0.6)" });
 	}
-	for (const s of posts) {
-		if (open(s)) continue;
+	for (const s of sorted) {
 		const [px, py] = at(s, 0);
 		r.box(px - 0.05, py - 0.05, 0, 0.1, 0.1, h, PAL.guardPost);
 	}
-	r.line(at(0, h), at(len, h), "#c9a220", 2);
+	// Top rail, broken at the gaps.
+	let s0 = 0;
+	for (const [a, b] of [...gaps].sort((p, q) => p[0] - q[0])) {
+		if (a > s0) r.line(at(s0, h), at(a, h), "#c9a220", 2);
+		s0 = b;
+	}
+	if (s0 < len) r.line(at(s0, h), at(len, h), "#c9a220", 2);
 }

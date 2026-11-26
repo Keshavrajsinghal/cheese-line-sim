@@ -2205,3 +2205,54 @@ abbr.assume {
 .labels-off .label-person {
 	display: none;
 }
+
+.step-chart {
+	margin: 12px 0;
+}
+
+.step-chart-svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	margin-top: 6px;
+}
+
+.step-chart .sc-label {
+	font: 600 12px var(--font);
+	fill: var(--text);
+}
+
+.step-chart .sc-val {
+	font: 600 11px var(--font);
+	fill: var(--muted);
+}
+
+.step-chart .sc-bar {
+	fill: var(--surface-3);
+}
+
+.step-chart .sc-bar.sc-max {
+	fill: var(--accent);
+}
+
+.step-chart .sc-max {
+	font-weight: 800;
+}
+
+.step-chart text.sc-max {
+	fill: var(--accent);
+}
+
+/* Wide tables (five or more columns, e.g. refill and workload tables) scroll sideways in the panel
+   instead of squeezing each word onto its own line. */
+.prose table {
+	font-size: 13px;
+}
+
+.prose table:has(thead th:nth-child(5)) {
+	min-width: 600px;
+}
+
+.prose table:has(thead th:nth-child(4)):not(:has(thead th:nth-child(5))) {
+	min-width: 480px;
+}

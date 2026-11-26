@@ -120,7 +120,8 @@ export class Scene {
 	 * priority?: higher wins, group? }
 	 */
 	addHit(hit) {
-		hit.rect = rectOfBounds(hit.bounds);
+		// bounds may be a function (a hit area that moves, such as a walking person).
+		hit.rect = rectOfBounds(typeof hit.bounds === "function" ? hit.bounds() : hit.bounds);
 		hit.area = (hit.rect[2] - hit.rect[0]) * (hit.rect[3] - hit.rect[1]);
 		hit.priority ??= 0;
 		this.hits.push(hit);
@@ -491,7 +492,7 @@ export class Scene {
 		const pad = 6 / this.camera.zoom;
 		let best = null;
 		for (const h of this.hits) {
-			const r = h.rect;
+			const r = typeof h.bounds === "function" ? rectOfBounds(h.bounds()) : h.rect;
 			if (px < r[0] - pad || px > r[2] + pad || py < r[1] - pad || py > r[3] + pad) continue;
 			if (!best || h.priority > best.priority || (h.priority === best.priority && h.area < best.area)) best = h;
 		}
